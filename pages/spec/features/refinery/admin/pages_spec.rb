@@ -227,7 +227,53 @@ module Refinery
       end
 
       describe 'Previewing', :js do
-        let(:preview_content) { "Some changes I'm unsure what they will look like".freeze }
+        let(:preview_content) { "Some changes. What they will look like?".freeze }
+
+        context "a new page", focus:true do
+          it 'will not show the preview changes the first time' do
+            visit refinery.admin_pages_path
+
+            find('a', text: 'Add new page').trigger(:click)
+
+            fill_in "Title", :with => "My first page"
+            page.evaluate_script("WYMeditor.INSTANCES[1].html('<p>Some changes. What they will look like?</p>')")
+            window = window_opened_by do
+              click_button "Preview"
+            end
+
+            expect_window_without_content(preview_content, window: window)
+
+            window.close
+          end
+
+          it 'will show the preview changes the second time' do
+            visit refinery.admin_pages_path
+
+            find('a', text: 'Add new page').trigger(:click)
+            pagetitle = page.title
+
+            fill_in "Title", :with => "My first page"
+            page.evaluate_script("WYMeditor.INSTANCES[1].html('<p>Some changes. What they will look like?</p>')")
+
+            # first click
+            window = window_opened_by do
+              click_button "Preview"
+            end
+            window.close
+
+            # second click
+            switch_to_window { title == pagetitle }
+            window = window_opened_by do
+              click_button "Preview"
+            end
+ 
+            expect_window_with_content(preview_content, window: window)
+
+            window.close
+          end
+ 
+        end
+
         context "an existing page" do
           before { Page.create :title => 'Preview me' }
 
